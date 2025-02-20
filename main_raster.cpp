@@ -29,6 +29,29 @@ std::string exec(const char* cmd) {
     }
     return result;
 }
+class Vec {
+public:
+    float x{},y{};
+    Vec() = default;
+
+    Vec(float _x, float _y) { x=_x; y=_y;}
+
+    Vec(const Vec& p) { x=p.x; y=p.y;}
+};
+class Particle {
+public:
+    Vec pos;
+    Vec dir;
+    Particle(const Vec& pos, const Vec& dir):pos(pos),dir(dir) {}
+};
+class Particles {
+    std::vector<Particle> elements;
+
+public:
+    void emitAt(const Vec& pos, const Vec& dir) {
+        elements.emplace_back(pos, dir);
+    }
+};
 
 class Board {
 public:
@@ -80,7 +103,6 @@ public:
     }
 };
 
-
 void draw_board(Board &board, canvas_ity::canvas &context, float y, float height) {
     context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, 1);
     for (uint8_t note = Board::note_lowest; note <= Board::note_highest; note++) {
@@ -122,7 +144,7 @@ public:
 };
 */
 
-void render_frame(v::MidiData *md, Board &board, canvas_ity::canvas &context, int width, int height, int frame) {
+void render_frame(Particles * particles, v::MidiData *md, Board &board, canvas_ity::canvas &context, int width, int height, int frame) {
 
     int ratio = 25;
     float t = static_cast<float>(frame) / static_cast<float>(ratio);
@@ -142,12 +164,13 @@ void render_frame(v::MidiData *md, Board &board, canvas_ity::canvas &context, in
         float length  = ((float) touch.length / v::Message::seconds) * stretch;
         float noteTop = bottomY - startAt;
         float noteBottom = noteTop + length;
+        bool contact = noteBottom > bottomY;
 //        printf("start=%f,bottom=%f\n", startAt,noteBottom);
-        if (noteTop < 0 || noteTop > bottomY) {
+        if (noteBottom < 0 || noteTop > bottomY) {
             continue;
         }
 
-        if (noteBottom > bottomY) {
+        if (contact) {
             length = bottomY - noteTop;
         }
 
@@ -155,6 +178,16 @@ void render_frame(v::MidiData *md, Board &board, canvas_ity::canvas &context, in
 
         context.set_color(canvas_ity::brush_type::fill_style, .5, .6, .7, 1);
         context.fill_rectangle(notePos - 1, noteTop, board.widthWhite - 2, length);
+
+        if (contact) {
+            context.set_shadow_blur(5);
+            context.set_shadow_color(1,1,1,1);
+            context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, .5);
+            context.fill_rectangle(notePos - 1, bottomY - 20, board.widthWhite - 2, 20);
+            context.set_shadow_blur(0);
+
+            particles->emitAt(Vec(notePos,bottomY-20));
+        }
     }
 
     char name[255] = {};
@@ -187,18 +220,19 @@ int main() {
     rawFile.close();
 
 
+    Particles particles;
     Board board(10, 1180);
     board.buildPos();
 
-    for (int i=0;i<2*25;i++) {
+    for (int i=0;i<1*25;i++) {
         printf("Frame=%d   \r", i);
         context.set_color(canvas_ity::brush_type::fill_style, 0, 0, 0, 1);
         context.fill_rectangle(0, 0, width, height);
         draw_board(board, context, 600 - 110, 100);
         render_frame(&md, board, context, width, height, i);
     }
-// -c:v libx264 -pix_fmt yuv420p
-    const char * cmd = "C:\\Users\\shop\\Downloads\\ffmpeg-7.1-full_build\\ffmpeg-7.1-full_build\\bin\\ffmpeg.exe -y -framerate 25 -i ../files/out-%d.png out.mp4";
+//
+    const char * cmd = "C:\\Users\\shop\\Downloads\\ffmpeg-7.1-full_build\\ffmpeg-7.1-full_build\\bin\\ffmpeg.exe -y -framerate 25 -i ../files/out-%d.png -c:v libx264 -pix_fmt yuv420p out.mp4";
     exec(cmd);
     printf("done\n");
     return 0;
