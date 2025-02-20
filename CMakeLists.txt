@@ -8,6 +8,8 @@ add_subdirectory(libs/libremidi)
 
 set(SOURCES_LIBS
         src/Midic.h
+        src/Util.h
+        src/Effects.h
 )
 
 add_executable(midic main.cpp ${SOURCES_LIBS})

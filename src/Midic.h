@@ -89,6 +89,7 @@ namespace v {
         uint64_t length{};
         Message startMessage{};
     };
+
     class MidiData {
 
 
