@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <string>
 #include <array>
+#include <ctime>
 
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer{};
@@ -29,6 +30,11 @@ std::string exec(const char* cmd) {
     }
     return result;
 }
+
+float vRandom() {
+    return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+}
+
 class Vec {
 public:
     float x{},y{};
@@ -38,18 +44,30 @@ public:
 
     Vec(const Vec& p) { x=p.x; y=p.y;}
 };
+
 class Particle {
 public:
+    float opacity=1;
     Vec pos;
     Vec dir;
     Particle(const Vec& pos, const Vec& dir):pos(pos),dir(dir) {}
 };
-class Particles {
-    std::vector<Particle> elements;
 
+class Particles {
 public:
+    std::vector<Particle> elements;
     void emitAt(const Vec& pos, const Vec& dir) {
         elements.emplace_back(pos, dir);
+    }
+    void update() {
+        for (auto & particle : elements) {
+            const float random_value_f = vRandom() * 2 - 1;
+            particle.dir.y -= vRandom() * .1;
+            particle.opacity -= vRandom() * .25;
+            particle.dir.x += random_value_f;
+            particle.pos.x += particle.dir.x;
+            particle.pos.y += particle.dir.y;
+        }
     }
 };
 
@@ -120,6 +138,7 @@ void draw_board(Board &board, canvas_ity::canvas &context, float y, float height
 }
 
 
+
 /*
 class File {
 public:
@@ -150,6 +169,19 @@ void render_frame(Particles * particles, v::MidiData *md, Board &board, canvas_i
     float t = static_cast<float>(frame) / static_cast<float>(ratio);
 
 
+    particles->update();
+    context.set_shadow_blur(5);
+    for (const auto particle : particles->elements) {
+        if (particle.opacity < 0.1) {
+            continue;
+        }
+        context.set_shadow_color(1,1,1,particle.opacity);
+        context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, particle.opacity);
+        context.fill_rectangle(particle.pos.x - 1, particle.pos.y - 1, 2, 2);
+    }
+    context.set_shadow_blur(0);
+
+
     float bottomY = 600 - 110 - 10;
 
     context.set_color(canvas_ity::brush_type::stroke_style, .5, .6, .7, 1);
@@ -165,7 +197,7 @@ void render_frame(Particles * particles, v::MidiData *md, Board &board, canvas_i
         float noteTop = bottomY - startAt;
         float noteBottom = noteTop + length;
         bool contact = noteBottom > bottomY;
-//        printf("start=%f,bottom=%f\n", startAt,noteBottom);
+        // printf("start=%f,bottom=%f\n", startAt,noteBottom);
         if (noteBottom < 0 || noteTop > bottomY) {
             continue;
         }
@@ -176,7 +208,7 @@ void render_frame(Particles * particles, v::MidiData *md, Board &board, canvas_i
 
         double notePos = board.getPos(touch.startMessage.note);
 
-        context.set_color(canvas_ity::brush_type::fill_style, .5, .6, .7, 1);
+        context.set_color(canvas_ity::brush_type::fill_style, .5, .6, .7, .5);
         context.fill_rectangle(notePos - 1, noteTop, board.widthWhite - 2, length);
 
         if (contact) {
@@ -186,7 +218,9 @@ void render_frame(Particles * particles, v::MidiData *md, Board &board, canvas_i
             context.fill_rectangle(notePos - 1, bottomY - 20, board.widthWhite - 2, 20);
             context.set_shadow_blur(0);
 
-            particles->emitAt(Vec(notePos,bottomY-20));
+            for (int i=0;i<10;i++) {
+                particles->emitAt(Vec(notePos,bottomY-20),Vec(vRandom()*4-2, -vRandom()*10));
+            }
         }
     }
 
@@ -201,6 +235,7 @@ void render_frame(Particles * particles, v::MidiData *md, Board &board, canvas_i
 }
 
 int main() {
+    std::srand(std::time({})); 
 
     static int const width = 1200, height = 600;
     canvas_ity::canvas context(width, height);
@@ -215,7 +250,7 @@ int main() {
     // read file and parse
     v::MidiData md;
     v::RawFile rawFile;
-    rawFile.init("out.raw", v::RawFile::READ);
+    rawFile.init("../data/example.raw", v::RawFile::READ);
     md.parse(rawFile);
     rawFile.close();
 
@@ -224,15 +259,15 @@ int main() {
     Board board(10, 1180);
     board.buildPos();
 
-    for (int i=0;i<1*25;i++) {
+    for (int i=0;i<2*25;i++) {
         printf("Frame=%d   \r", i);
         context.set_color(canvas_ity::brush_type::fill_style, 0, 0, 0, 1);
         context.fill_rectangle(0, 0, width, height);
         draw_board(board, context, 600 - 110, 100);
-        render_frame(&md, board, context, width, height, i);
+        render_frame(&particles, &md, board, context, width, height, i);
     }
-//
-    const char * cmd = "C:\\Users\\shop\\Downloads\\ffmpeg-7.1-full_build\\ffmpeg-7.1-full_build\\bin\\ffmpeg.exe -y -framerate 25 -i ../files/out-%d.png -c:v libx264 -pix_fmt yuv420p out.mp4";
+    //
+    const char * cmd = "ffmpeg -y -framerate 25 -i ../files/out-%d.png -c:v libx264 -pix_fmt yuv420p ../files/out.mp4";
     exec(cmd);
     printf("done\n");
     return 0;
