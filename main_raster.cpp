@@ -16,17 +16,19 @@ using namespace v;
 
 
 
-void draw_board(Board &board, canvas_ity::canvas &context, float y, float height) {
-    context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, 1);
+void draw_board(Board &board, canvas_ity::canvas &context, float y, float height, std::vector<int> & down) {
     for (uint8_t note = Board::note_lowest; note <= Board::note_highest; note++) {
+        bool isDown = std::find(down.begin(), down.end(), note) != down.end();
         if (Board::isWhite(note)) {
             float pos = board.getPos(note) - 1;
+            context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, isDown ? .5: 1);
             context.fill_rectangle(pos, y, board.widthWhite - 2, height);
         }
     }
-    context.set_color(canvas_ity::brush_type::fill_style, .2, .2, .2, 1);
     for (uint8_t note = Board::note_lowest; note <= Board::note_highest; note++) {
+        bool isDown = std::find(down.begin(), down.end(), note) != down.end();
         if (!Board::isWhite(note)) {
+            context.set_color(canvas_ity::brush_type::fill_style, isDown?0:.2, isDown?0:.2, isDown?0:.2, 1);
             context.fill_rectangle(board.getPos(note) + (board.widthWhite*.15f) - 1, y, (board.widthWhite*.7f) - 2, (float) height / 1.5f);
         }
     }
@@ -34,11 +36,12 @@ void draw_board(Board &board, canvas_ity::canvas &context, float y, float height
 
 
 
-void
+std::vector<int>
 render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canvas &context, int width, int height,
              int frame, int ratio = 25) {
 
     float t = static_cast<float>(frame) / static_cast<float>(ratio);
+    std::vector<int> notesDown;
 
 
     particles->update();
@@ -80,6 +83,7 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
 
         if (contact) {
             length = bottomY - noteTop;
+            notesDown.push_back(touch.startMessage.note);
         }
 
         auto notePos = board.getPos(touch.startMessage.note);
@@ -107,14 +111,7 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
             }
         }
     }
-
-    char name[255] = {};
-    sprintf(name, "../files/out-%d.png", frame);
-
-    auto *image = new unsigned char[height * width * 4];
-    context.get_image_data(image, width, height, width * 4, 0, 0);
-    stbi_write_png(name, width, height, 4, image, width * 4);
-    delete[] image;
+    return notesDown;
 
 }
 
@@ -140,6 +137,7 @@ int main() {
     board.buildPos();
 
     const int frameRate = 25;
+    char name[255] = {};
 
     int is = 0; int ie = 7 * frameRate;
     for (int i = is; i < ie; i++) {
@@ -152,8 +150,14 @@ int main() {
         context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, 1);
         context.set_font(font.data, font.size, 20);
         context.fill_text("Author", 30, 40 + 20);
-        draw_board(board, context, height - 110, 100);
-        render_frame(&particles, &md, board, context, width, height, i, frameRate);
+        auto downNotes = render_frame(&particles, &md, board, context, width, height, i, frameRate);
+        draw_board(board, context, height - 110, 100, downNotes);
+
+        sprintf(name, "../files/out-%d.png", i);
+        auto *image = new unsigned char[height * width * 4];
+        context.get_image_data(image, width, height, width * 4, 0, 0);
+        stbi_write_png(name, width, height, 4, image, width * 4);
+        delete[] image;
     }
 
     char cmd[512] = {};

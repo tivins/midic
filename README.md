@@ -15,3 +15,14 @@ cd build
 cmake ..
 make
 ```
+
+Usage:
+
+* Record the instrument
+  ```shell
+  ./midic
+  ```
+* Generate video
+  ```shell
+  ./midic_raster
+  ``` 
