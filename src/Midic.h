@@ -9,8 +9,25 @@
 #include <cstdio>
 #include <stdexcept>
 #include "../libs/libremidi/include/libremidi/message.hpp"
+#include "Util.h"
 
 namespace v {
+
+    class RasterConfig {
+    public:
+        Col white_up;
+        Col white_down;
+        Col black_up;
+        Col black_down;
+        int frameRate = 25;
+        Size videoSize;
+        unsigned int seed = 0;
+        std::string title;
+        std::string author;
+        int numFrames = 1;
+        std::string mp4Filename;
+        std::string imagesPath;
+    };
 
     class Message {
     public:
@@ -112,9 +129,9 @@ namespace v {
                 }
             }
 
-            for (const auto &touch : touches) {
-                printf("Note=%d Length=%f\n", touch.startMessage.note, (double)touch.length/Message::seconds);
-            }
+            // for (const auto &touch : touches) {
+            //     printf("Note=%d Length=%f\n", touch.startMessage.note, (double)touch.length/Message::seconds);
+            // }
         }
     };
 

@@ -85,7 +85,6 @@ namespace v {
                 }
                 index++;
             }
-            printf("index=%d\n", index);
         }
     };
 }

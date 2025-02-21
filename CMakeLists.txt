@@ -9,7 +9,6 @@ add_subdirectory(libs/fmt-11.1.3)
 
 
 include(FetchContent)
-
 FetchContent_Declare(
   yaml-cpp
   GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
@@ -28,6 +27,6 @@ add_executable(midic main.cpp ${SOURCES_LIBS})
 target_link_libraries(midic libremidi)
 
 add_executable(midic_rater main_raster.cpp ${SOURCES_LIBS})
-target_link_libraries(midic_rater PUBLIC libremidi fmt)
+target_link_libraries(midic_rater PUBLIC libremidi fmt yaml-cpp::yaml-cpp)
 
-# yaml-cpp::yaml-cpp
+# 

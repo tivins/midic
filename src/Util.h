@@ -22,22 +22,24 @@ namespace v {
             a=_a;
         }
     };
+
     class Vec {
     public:
         float x{}, y{};
-
         Vec() = default;
-
-        Vec(float _x, float _y) {
-            x = _x;
-            y = _y;
-        }
-
-        Vec(const Vec &p) {
-            x = p.x;
-            y = p.y;
-        }
+        Vec(float x, float y):x(x),y(y) { }
+        Vec(const Vec &p):x(p.x),y(p.y) { }
     };
+
+    class Size {
+    public:
+        float w{}, h{};
+        Size() = default;
+        Size(float w, float h) : w(w), h(h) { }
+        Size(const Size &p) : w(p.w), h(p.h) { }
+        void set(float _w, float _h) { w=_w; h=_h; }
+    };
+
 
     class Util {
     public:
@@ -68,10 +70,11 @@ namespace v {
             delete[] data;
         }
 
-        void load(const char *filename) {
+        bool load(const char *filename) {
             FILE *fp = fopen(filename, "rb");
             if (!fp) {
-                throw std::runtime_error("cannot load file");
+                // throw std::runtime_error("cannot load file");
+                return false;
             }
             fseek(fp, 0, SEEK_END);
             size = ftell(fp);
@@ -79,6 +82,7 @@ namespace v {
             data = new unsigned char[size]();
             fread(data, sizeof(uint8_t), size, fp);
             fclose(fp);
+            return true;
         }
     };
 } // v

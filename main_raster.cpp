@@ -7,6 +7,7 @@
 #include "libs/canvas_ity/canvas_ity.hpp"
 
 #include "libs/fmt-11.1.3/include/fmt/format.h"
+#include <yaml-cpp/yaml.h>
 
 #include "src/Midic.h"
 #include "src/Util.h"
@@ -17,38 +18,26 @@
 
 using namespace v;
 
-class RasterConfig {
-public:
-    Col white_up;
-    Col white_down;
-    Col black_up;
-    Col black_down;
-    int frameRate = 25;
-    int videoWidth = 800;
-    int videoHeight = 600;
-    unsigned int seed = 0;
-    std::string title = "";
-    std::string author = "";
-};
-
 static RasterConfig config;
 
-void initConf() {
+void initConf() 
+{
     config.white_up.set(.8,.8,.8);
     config.white_down.set(1,1,1);
     config.black_up.set(.2,.2,.2);
     config.black_down.set(.4,.4,.4);
     config.frameRate = 25;
-    config.videoWidth = 1280; // 1920
-    config.videoHeight = 720; // 1080
+    config.numFrames = 7 * config.frameRate;
+    config.videoSize.set(1280,720); // 1920,1080
     config.seed = std::time({});
     config.title = "Title";
     config.author = "Author";
+    config.mp4Filename = "../files/out.mp4";
+    config.imagesPath = "../files/out-{}.png";
 }
 
 
 void draw_board(Board &board, canvas_ity::canvas &context, float y, float height, std::vector<int> & down) {
-
     for (uint8_t note = Board::note_lowest; note <= Board::note_highest; note++) {
         if (Board::isWhite(note)) {
             bool isDown = std::find(down.begin(), down.end(), note) != down.end();
@@ -83,14 +72,20 @@ std::vector<int> render_frame(Particles *particles, MidiData *md, Board &board, 
 
 
     particles->update();
-    for (const auto& particle: particles->elements) {
+    auto idx = std::begin(particles->elements);
+    while (idx != std::end(particles->elements)) {
+    // for (const auto& particle: particles->elements) {
+        auto particle = *idx;
         if (particle.opacity < 0.1) {
+            idx = particles->elements.erase(idx);
             continue;
         }
         context.set_shadow_blur(5 - Util::rand());
         context.set_shadow_color(.5, .7, .9, particle.opacity);
         context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, particle.opacity);
         context.fill_rectangle(particle.pos.x - 1, particle.pos.y - 1, 2, 2);
+
+        idx++;
     }
     context.set_shadow_blur(0);
 
@@ -152,73 +147,77 @@ std::vector<int> render_frame(Particles *particles, MidiData *md, Board &board, 
     return notesDown;
 }
 
-void saveImage(canvas_ity::canvas &context, const char * name) {
-    auto *image = new unsigned char[config.videoHeight * config.videoWidth * 4];
-    context.get_image_data(image, config.videoWidth, config.videoHeight, config.videoWidth * 4, 0, 0);
-    stbi_write_png(name, config.videoWidth, config.videoHeight, 4, image, config.videoWidth * 4);
+void saveImage(canvas_ity::canvas &context, const std::string& name) {
+    auto *image = new unsigned char[(int)config.videoSize.w * (int)config.videoSize.h * 4];
+    context.get_image_data(image, config.videoSize.w, config.videoSize.h, config.videoSize.w * 4, 0, 0);
+    stbi_write_png(name.c_str(), config.videoSize.w, config.videoSize.h, 4, image, config.videoSize.w * 4);
     delete[] image;
 }
 
 int main() {
-
+    Particles particles;
+    MidiData md;
+    RawFile rawFile;
+    File font;
 
     initConf();
 
     std::srand(config.seed);
-    static int const width = 1280, height = 720; // 1920x1080
-    canvas_ity::canvas context(config.videoWidth, config.videoHeight);
+    canvas_ity::canvas context(config.videoSize.w, config.videoSize.h);
 
-    File font;
-    try {
-        font.load("../data/Candara.ttf");
+    if (!font.load("../data/font.ttf")) {
+        std::cerr << "Cannot load font file\n";
     }
-    catch(std::exception&e) {
-        std::cerr << fmt::format("Error: {}\n", e.what());
-    }
-
 
     // read file and parse
-    MidiData md;
-    RawFile rawFile;
     rawFile.init("../data/example.raw", RawFile::READ);
     md.parse(rawFile);
     rawFile.close();
 
-
-    Particles particles;
-    Board board(10, config.videoWidth - 20);
+    // build board
+    Board board(10, config.videoSize.w - 20);
     board.buildPos();
 
-    // const int frameRate = 25;
-    char name[255] = {};
 
-    int is = 0; int ie = 7 * config.frameRate;
-    for (int i = is; i < ie; i++) {
-        printf("Frame=%d   \r", i);
+    int is = 0;
+    for (int i = 0; i < config.numFrames; i++) {
+        std::cout << "Rendering frame " << (i + 1) << "/" << config.numFrames << "\r" << std::flush;
+
         context.set_color(canvas_ity::brush_type::fill_style, 0, 0, 0, 1);
-        context.fill_rectangle(0, 0, width, height);
+        context.fill_rectangle(0, 0, config.videoSize.w, config.videoSize.h);
+
+        // title        
         context.set_color(canvas_ity::brush_type::fill_style, 1, 1, 1, 1);
         context.set_font(font.data, font.size, 25);
-        context.fill_text("Title", 30, 40);
+        context.fill_text(config.title.c_str(), 30, 40);
+        
+        // author
         context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, 1);
         context.set_font(font.data, font.size, 20);
-        context.fill_text("Author", 30, 40 + 20);
-        auto downNotes = render_frame(&particles, &md, board, context, width, height, i);
-        draw_board(board, context, height - 110, 100, downNotes);
+        context.fill_text(config.author.c_str(), 30, 40 + 20);
 
-        sprintf(name, "../files/out-%d.png", i);
-        saveImage(context, name);
+        // debug
+        context.set_color(canvas_ity::brush_type::fill_style, .6, .6, .6, 1);
+        context.set_font(font.data, font.size, 14);
+        context.fill_text(fmt::format("Frame {}\nParticles {}", i, particles.elements.size()).c_str(), 30, 40 + 20 + 20);
+
+        // render notes and board
+        auto downNotes = render_frame(&particles, &md, board, context, config.videoSize.w, config.videoSize.h, i);
+        draw_board(board, context, config.videoSize.h - 110, 100, downNotes);
+
+        saveImage(context, fmt::format(fmt::runtime(config.imagesPath), i));
     }
 
-    const char * mp4Filename = "../files/out.mp4";
     
-    char cmd[512] = {};
-    sprintf(cmd,
-            "ffmpeg -y -framerate %d -i ../files/out-%%d.png -c:v libx264 -pix_fmt yuv420p %s",
-            config.frameRate,
-            mp4Filename);
+    
+    auto cmd = fmt::format(
+        "ffmpeg -y -framerate {} -i {} -c:v libx264 -pix_fmt yuv420p {}",
+        config.frameRate,
+        fmt::format(fmt::runtime(config.imagesPath), "%d"),
+        config.mp4Filename
+    );
 
-    const std::string result = Util::exec(cmd);
-    printf("Done (%s). Video saved %s\n", result.c_str(), mp4Filename);
+    /* const std::string result = */ Util::exec(cmd.c_str());
+    fmt::print("Video saved {}\n", config.mp4Filename);
     return 0;
 }
