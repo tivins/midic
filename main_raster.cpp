@@ -6,40 +6,78 @@
 #define CANVAS_ITY_IMPLEMENTATION
 #include "libs/canvas_ity/canvas_ity.hpp"
 
+#include "libs/fmt-11.1.3/include/fmt/format.h"
+
 #include "src/Midic.h"
 #include "src/Util.h"
 #include "src/Effects.h"
 #include <string>
 #include <ctime>
+#include <iostream>
 
 using namespace v;
 
+class RasterConfig {
+public:
+    Col white_up;
+    Col white_down;
+    Col black_up;
+    Col black_down;
+    int frameRate = 25;
+    int videoWidth = 800;
+    int videoHeight = 600;
+    unsigned int seed = 0;
+    std::string title = "";
+    std::string author = "";
+};
+
+static RasterConfig config;
+
+void initConf() {
+    config.white_up.set(.8,.8,.8);
+    config.white_down.set(1,1,1);
+    config.black_up.set(.2,.2,.2);
+    config.black_down.set(.4,.4,.4);
+    config.frameRate = 25;
+    config.videoWidth = 1280; // 1920
+    config.videoHeight = 720; // 1080
+    config.seed = std::time({});
+    config.title = "Title";
+    config.author = "Author";
+}
 
 
 void draw_board(Board &board, canvas_ity::canvas &context, float y, float height, std::vector<int> & down) {
+
     for (uint8_t note = Board::note_lowest; note <= Board::note_highest; note++) {
-        bool isDown = std::find(down.begin(), down.end(), note) != down.end();
         if (Board::isWhite(note)) {
+            bool isDown = std::find(down.begin(), down.end(), note) != down.end();
+            Col c = isDown ? config.white_down : config.white_up;
             float pos = board.getPos(note) - 1;
-            context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, isDown ? .5: 1);
+            context.set_color(canvas_ity::brush_type::fill_style, c.r, c.g, c.b, c.a);
             context.fill_rectangle(pos, y, board.widthWhite - 2, height);
         }
     }
     for (uint8_t note = Board::note_lowest; note <= Board::note_highest; note++) {
-        bool isDown = std::find(down.begin(), down.end(), note) != down.end();
         if (!Board::isWhite(note)) {
-            context.set_color(canvas_ity::brush_type::fill_style, isDown?0:.2, isDown?0:.2, isDown?0:.2, 1);
-            context.fill_rectangle(board.getPos(note) + (board.widthWhite*.15f) - 1, y, (board.widthWhite*.7f) - 2, (float) height / 1.5f);
+            bool isDown = std::find(down.begin(), down.end(), note) != down.end();
+            Col c = isDown ? config.black_down : config.black_up;
+            float baseWidth = (board.widthWhite*.6f);
+            float offset = (board.widthWhite*.2f);
+
+            context.set_color(canvas_ity::brush_type::fill_style, 0, 0, 0, 1);
+            context.fill_rectangle(board.getPos(note) + offset - 1 - 2, y, baseWidth - 2 + 4, (float) height / 1.5f + 2);
+
+            context.set_color(canvas_ity::brush_type::fill_style, c.r, c.g, c.b, c.a);
+            context.fill_rectangle(board.getPos(note) + offset - 1, y, baseWidth - 2, (float) height / 1.5f);
         }
     }
 }
 
+std::vector<int> render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canvas &context, int width, int height,
+             int frame) {
 
-
-std::vector<int>
-render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canvas &context, int width, int height,
-             int frame, int ratio = 25) {
-
+    int ratio = config.frameRate;
     float t = static_cast<float>(frame) / static_cast<float>(ratio);
     std::vector<int> notesDown;
 
@@ -112,16 +150,31 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
         }
     }
     return notesDown;
+}
 
+void saveImage(canvas_ity::canvas &context, const char * name) {
+    auto *image = new unsigned char[config.videoHeight * config.videoWidth * 4];
+    context.get_image_data(image, config.videoWidth, config.videoHeight, config.videoWidth * 4, 0, 0);
+    stbi_write_png(name, config.videoWidth, config.videoHeight, 4, image, config.videoWidth * 4);
+    delete[] image;
 }
 
 int main() {
-    std::srand(std::time({}));
+
+
+    initConf();
+
+    std::srand(config.seed);
     static int const width = 1280, height = 720; // 1920x1080
-    canvas_ity::canvas context(width, height);
+    canvas_ity::canvas context(config.videoWidth, config.videoHeight);
 
     File font;
-    font.load("../data/Candara.ttf");
+    try {
+        font.load("../data/Candara.ttf");
+    }
+    catch(std::exception&e) {
+        std::cerr << fmt::format("Error: {}\n", e.what());
+    }
 
 
     // read file and parse
@@ -133,13 +186,13 @@ int main() {
 
 
     Particles particles;
-    Board board(10, width - 20);
+    Board board(10, config.videoWidth - 20);
     board.buildPos();
 
-    const int frameRate = 25;
+    // const int frameRate = 25;
     char name[255] = {};
 
-    int is = 0; int ie = 7 * frameRate;
+    int is = 0; int ie = 7 * config.frameRate;
     for (int i = is; i < ie; i++) {
         printf("Frame=%d   \r", i);
         context.set_color(canvas_ity::brush_type::fill_style, 0, 0, 0, 1);
@@ -150,23 +203,22 @@ int main() {
         context.set_color(canvas_ity::brush_type::fill_style, .8, .8, .8, 1);
         context.set_font(font.data, font.size, 20);
         context.fill_text("Author", 30, 40 + 20);
-        auto downNotes = render_frame(&particles, &md, board, context, width, height, i, frameRate);
+        auto downNotes = render_frame(&particles, &md, board, context, width, height, i);
         draw_board(board, context, height - 110, 100, downNotes);
 
         sprintf(name, "../files/out-%d.png", i);
-        auto *image = new unsigned char[height * width * 4];
-        context.get_image_data(image, width, height, width * 4, 0, 0);
-        stbi_write_png(name, width, height, 4, image, width * 4);
-        delete[] image;
+        saveImage(context, name);
     }
 
+    const char * mp4Filename = "../files/out.mp4";
+    
     char cmd[512] = {};
     sprintf(cmd,
             "ffmpeg -y -framerate %d -i ../files/out-%%d.png -c:v libx264 -pix_fmt yuv420p %s",
-            frameRate,
-            "../files/out.mp4");
+            config.frameRate,
+            mp4Filename);
 
     const std::string result = Util::exec(cmd);
-    printf("done\n");
+    printf("Done (%s). Video saved %s\n", result.c_str(), mp4Filename);
     return 0;
 }

@@ -10,6 +10,18 @@
 #include <array>
 
 namespace v {
+    class Col {
+    public:
+        float r{}, g{}, b{}, a{};
+        Col() = default;
+        Col(float r, float g, float b, float a = 1): r(r),g(g),b(b),a(a) {}
+        void set(float _r, float _g, float _b, float _a = 1) {
+            r = _r;
+            g=_g;
+            b=_b;
+            a=_a;
+        }
+    };
     class Vec {
     public:
         float x{}, y{};

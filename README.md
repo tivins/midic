@@ -3,11 +3,12 @@ C++ MIDI recorder and visualizer
 
 ![preview.png](data/preview.png)
 
+
+Install:
+
 Requirements:
 
 * `ffmpeg` to be installed.
-
-Install:
 
 ```shell
 mkdir build
@@ -24,5 +25,5 @@ Usage:
   ```
 * Generate video
   ```shell
-  ./midic_raster
+  ./midic_raster <raw file> <config file>
   ``` 
