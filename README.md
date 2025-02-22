@@ -4,7 +4,7 @@ C++ MIDI recorder and visualizer
 ![preview.png](data/preview.png)
 
 
-Install:
+### Install:
 
 Requirements:
 
@@ -17,13 +17,27 @@ cmake ..
 make
 ```
 
-Usage:
+### Usage:
 
-* Record the instrument
+* Record an instrument
   ```shell
-  ./midic
+  ./midic [<raw file>]
   ```
 * Generate video
   ```shell
   ./midic_raster <raw file> <config file>
   ``` 
+* Tools (planned)
+  ```shell
+  #./midic_trim <input raw file> [<output raw file>]
+  #./midic_quantize <input raw file> [<output raw file>]
+  ```
+  
+-----
+
+### TODO
+
+* [ ] display velocity (alpha + glow)
+* [ ] create midic_trim
+* [ ] create midic_midi
+* [ ] create midic_quantize  

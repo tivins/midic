@@ -1,7 +1,7 @@
 #include <libremidi/libremidi.hpp>
 #include <iostream>
 #include <csignal>
-#include "src/Midic.h"
+#include "lib/Midic.h"
 
 
 v::RawFile rawFile;
@@ -21,14 +21,16 @@ auto my_callback = [](const libremidi::message &message) {
 };
 
 int main(int argc, char **argv) {
-    (void) argc;
-    (void) argv;
+
+    std::string filename = "../files/out.raw";
+    if (argc > 1) {
+        filename = argv[1];
+    }
 
     std::cout << "MIDI-Recorder\n";
     signal(SIGINT, my_handler);
 
     try {
-        const char *filename = "out.raw";
         libremidi::midi_in midi{libremidi::input_configuration{.on_message = my_callback}};
         midi.open_port(libremidi::midi1::in_default_port().value());
         rawFile.init(filename, v::RawFile::WRITE);

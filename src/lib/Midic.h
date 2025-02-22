@@ -8,7 +8,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <stdexcept>
-#include "../libs/libremidi/include/libremidi/message.hpp"
+#include "libremidi/message.hpp"
+#include "fmt/format.h"
 #include "Util.h"
 
 namespace v {
@@ -25,8 +26,22 @@ namespace v {
         std::string title;
         std::string author;
         int numFrames = 1;
+        bool buildVideo = true;
         std::string mp4Filename;
         std::string imagesPath;
+
+        void print() const {
+            fmt::print("Raster configuration:\n");
+            fmt::print("colors:\n");
+            fmt::print("  white_up: [{},{},{},{}]\n", white_up.r, white_up.g, white_up.b, white_up.a);
+            fmt::print("  white_down: [{},{},{},{}]\n", white_down.r, white_down.g, white_down.b, white_down.a);
+            fmt::print("  black_up: [{},{},{},{}]\n", black_up.r, black_up.g, black_up.b, black_up.a);
+            fmt::print("  black_down: [{},{},{},{}]\n", black_down.r, black_down.g, black_down.b, black_down.a);
+            fmt::print("video:\n");
+            fmt::print("  buildVideo: {}\n", buildVideo);
+            fmt::print("  frameRate: {}\n", frameRate);
+            fmt::print("  numFrames: {}\n", numFrames);
+        }
     };
 
     class Message {
@@ -60,8 +75,8 @@ namespace v {
             WRITE, READ
         };
 
-        void init(const char *name, Mode mode) {
-            filePointer = fopen(name, mode == Mode::READ ? "rb" : "wb+");
+        void init(const std::string &name, Mode mode) {
+            filePointer = fopen(name.c_str(), mode == Mode::READ ? "rb" : "wb+");
             uint64_t magic = 123456789;
             switch (mode) {
                 case Mode::READ:

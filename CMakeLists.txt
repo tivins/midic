@@ -18,15 +18,15 @@ FetchContent_MakeAvailable(yaml-cpp)
 
 
 set(SOURCES_LIBS
-        src/Midic.h
-        src/Util.h
-        src/Effects.h
+        src/lib/Midic.h
+        src/lib/Util.h
+        src/lib/Effects.h
 )
 
-add_executable(midic main.cpp ${SOURCES_LIBS})
+add_executable(midic src/main.cpp ${SOURCES_LIBS})
 target_link_libraries(midic libremidi)
 
-add_executable(midic_rater main_raster.cpp ${SOURCES_LIBS})
-target_link_libraries(midic_rater PUBLIC libremidi fmt yaml-cpp::yaml-cpp)
+add_executable(midic_raster src/main_raster.cpp ${SOURCES_LIBS})
+target_link_libraries(midic_raster PUBLIC libremidi fmt yaml-cpp::yaml-cpp)
 
 # 

@@ -1,18 +1,26 @@
-config:
-  colors:
-    white_up: [.8,.8,.8]
-    white_down: [1,1,1]
-    black_up: [.2,.2,.2]
-    black_down: [.4,.4,.4]
-  video:
-    frameRate: 25
-    numFrames: 174
-    size: [1280,720]
-    seed: "default"
-  info:
-    title: "Title"
-    author: "Author"
-    debug: true
-  files:
-    mp4Filename: "../files/out.mp4"
-    imagesPath: "../files/out-{}.png"
+# Sample configuration file for midic_raster
+colors:
+  white_up: [.8,.8,.8]
+  white_down: [1,1,1]
+  black_up: [.2,.2,.2]
+  black_down: [.4,.4,.4]
+render:
+  particles:
+    enable: true
+video:
+  buildVideo: true
+  frameRate: 25
+  numFrames: 1000
+  #size: [3840, 2160] # 4k 2160p
+  #size: [2560, 1440] # 2k 1440p
+  #size: [1920, 1080] # fhd 1080p
+  #size: [1280, 720] # hd 720p
+  size: [854, 480] # sd
+  seed: "default"
+info:
+  title: "Song Title"
+  author: "John Doe"
+  debug: true
+files:
+  mp4Filename: "../files/out.mp4"
+  imagesPath: "../files/out-{}.png"
