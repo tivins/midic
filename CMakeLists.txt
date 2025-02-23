@@ -24,8 +24,11 @@ set(SOURCES_LIBS
         src/lib/Display.h
 )
 
-add_executable(midic src/main.cpp ${SOURCES_LIBS})
-target_link_libraries(midic libremidi)
+add_executable(midic_rec src/main.cpp ${SOURCES_LIBS})
+target_link_libraries(midic_rec libremidi fmt)
+
+add_executable(midic_midi src/main_midi.cpp ${SOURCES_LIBS})
+target_link_libraries(midic_midi libremidi fmt)
 
 add_executable(midic_raster src/main_raster.cpp ${SOURCES_LIBS})
 target_link_libraries(midic_raster PUBLIC libremidi fmt yaml-cpp::yaml-cpp)

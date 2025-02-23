@@ -6,9 +6,9 @@ C++ MIDI recorder and visualizer
 
 ### Install:
 
-Requirements:
+* Optional `ffmpeg` (to build video)
+* Optional `fluidsynth` (to generate wave file from midi)
 
-* `ffmpeg` to be installed.
 
 ```shell
 mkdir build
@@ -21,11 +21,11 @@ make
 
 * Record an instrument
   ```shell
-  ./midic [<raw file>]
+  ./midic_rec [<output raw file>]
   ```
 * Generate video
   ```shell
-  ./midic_raster <raw file> <config file>
+  ./midic_raster [-c <config file>] <raw file>
   ``` 
 * Tools (planned)
   ```shell

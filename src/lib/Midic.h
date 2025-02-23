@@ -125,8 +125,6 @@ namespace v {
     };
 
     class MidiData {
-
-
     public:
         std::vector<Touch> touches;
         void parse(const RawFile& file) {
