@@ -1,7 +1,7 @@
 # MIDIC 
 C++ MIDI recorder and visualizer
 
-![preview.png](data/preview.png)
+![preview.png](data/preview-2.png)
 
 
 ### Install:

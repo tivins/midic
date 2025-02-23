@@ -10,12 +10,13 @@ render:
 video:
   buildVideo: true
   frameRate: 25
-  numFrames: 1000
+  numFrames: 300
+  #size: [7680, 4320] # 8k 4320p
   #size: [3840, 2160] # 4k 2160p
   #size: [2560, 1440] # 2k 1440p
   #size: [1920, 1080] # fhd 1080p
-  #size: [1280, 720] # hd 720p
-  size: [854, 480] # sd
+  size: [1280, 720] # hd 720p
+  #size: [854, 480] # sd
   seed: "default"
 info:
   title: "Song Title"

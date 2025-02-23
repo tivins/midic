@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include "libremidi/message.hpp"
-#include "fmt/format.h"
+#include "../../libs/fmt-11.1.3/include/fmt/format.h"
 #include "Util.h"
 
 namespace v {
@@ -25,8 +25,10 @@ namespace v {
         unsigned int seed = 0;
         std::string title;
         std::string author;
+        std::string sub_text;
         int numFrames = 1;
         bool buildVideo = true;
+        bool debug = false;
         std::string mp4Filename;
         std::string imagesPath;
 
@@ -137,7 +139,7 @@ namespace v {
                 else if (static_cast<libremidi::message_type>(mCurr.status) == libremidi::message_type::NOTE_OFF) {
                     if (notes[mCurr.note].timestamp) {
                         Touch t;
-                        t.startMessage = mCurr;
+                        t.startMessage = notes[mCurr.note];
                         t.length = mCurr.timestamp - notes[mCurr.note].timestamp;
                         touches.push_back(t);
                     }

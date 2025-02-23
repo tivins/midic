@@ -31,14 +31,17 @@ namespace v {
         Vec(const Vec &p):x(p.x),y(p.y) { }
     };
 
-    class Size {
+    template<typename T>
+    class SizeType {
     public:
-        float w{}, h{};
-        Size() = default;
-        Size(float w, float h) : w(w), h(h) { }
-        Size(const Size &p) : w(p.w), h(p.h) { }
-        void set(float _w, float _h) { w=_w; h=_h; }
+        T w{}, h{};
+        SizeType() = default;
+        SizeType(T w, T h) : w(w), h(h) { }
+        SizeType(const SizeType<T> &p) : w(p.w), h(p.h) { }
+        void set(T _w, T _h) { w=_w; h=_h; }
     };
+    typedef SizeType<float> Size;
+    typedef SizeType<int> SizeInt;
 
 
     class Util {

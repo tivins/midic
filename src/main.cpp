@@ -28,13 +28,14 @@ int main(int argc, char **argv) {
     }
 
     std::cout << "MIDI-Recorder\n";
+    std::cout << "Output: '" << filename << "'\n";
     signal(SIGINT, my_handler);
 
     try {
         libremidi::midi_in midi{libremidi::input_configuration{.on_message = my_callback}};
         midi.open_port(libremidi::midi1::in_default_port().value());
         rawFile.init(filename, v::RawFile::WRITE);
-        std::cout << "Listening... (Ctrl+C to finish)\n";
+        std::cout << "Recording... (Ctrl+C to finish)\n";
         while (running); // loop while ctrl+c
         rawFile.close();
         std::cout << "File saved at '" << filename << "'.\n";
@@ -42,8 +43,7 @@ int main(int argc, char **argv) {
         std::cerr << "| ERROR:\n";
         std::cerr << "| Cannot read MIDI instrument.\n";
         std::cerr << "| (what: " << e.what() << ")\n";
+        return 1;
     }
-
-
     return 0;
 }

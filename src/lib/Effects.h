@@ -29,13 +29,21 @@ namespace v {
         }
 
         void update() {
-            for (auto &particle: elements) {
+            auto idx = std::begin(elements);
+            while (idx != std::end(elements)) {
+                auto &particle = *idx;
                 const float random_value_f = Util::rand() * 1 - .5f;
-                particle.dir.y -= Util::rand() * .07f;
                 particle.opacity -= Util::rand() * .06f;
+                particle.dir.y -= Util::rand() * .07f;
                 particle.dir.x += random_value_f;
                 particle.pos.x += particle.dir.x;
                 particle.pos.y += particle.dir.y;
+
+                if (particle.opacity < 0.1) {
+                    idx = elements.erase(idx);
+                    continue;
+                }
+                idx++;
             }
         }
     };

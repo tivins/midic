@@ -1,29 +1,51 @@
 // Created by Tivins on 19/02/2025.
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-
 #include "../libs/stb_image_write.h"
+//
+#define STB_IMAGE_IMPLEMENTATION
+#include "../libs/stb_image.h"
+//
 
-#define CANVAS_ITY_IMPLEMENTATION
-
-#include "../libs/canvas_ity/canvas_ity.hpp"
-
+//
 #include "yaml-cpp/yaml.h"
-
 #include "lib/Midic.h"
 #include "lib/Util.h"
 #include "lib/Effects.h"
+#include "lib/Display.h"
 #include <string>
 #include <ctime>
 #include <iostream>
 
 using namespace v;
 
+struct Image {
+    uint8_t *data = nullptr;
+    SizeInt size;
+    int components = 4;
+
+    virtual ~Image() {
+        delete[] data;
+        size.set(0, 0);
+    }
+
+    bool load(const std::string &filename) {
+        stbi_set_flip_vertically_on_load(false);
+        data = stbi_load(filename.c_str(), &size.w, &size.h, &components, 0);
+        fmt::print("LoadImage w={}, h={}, c={}\n", size.w, size.h, components);
+        stbi_set_flip_vertically_on_load(false);
+        return true;
+    }
+};
+
 static RasterConfig config;
+static Image imageSmoke;
 
 static Col parseCol(const YAML::Node &node) {
-    return {node[0].as<float>(), node[1].as<float>(), node[2].as<float>(), node[3].IsDefined() ? node[3].as<float>() : 1};
+    return {node[0].as<float>(), node[1].as<float>(), node[2].as<float>(),
+            node[3].IsDefined() ? node[3].as<float>() : 1};
 }
+
 static Size parseSize(const YAML::Node &node) {
     return {node[0].as<float>(), node[1].as<float>()};
 }
@@ -39,9 +61,11 @@ void initConf(const std::string &filename) {
     config.seed = std::time({});
     config.title = "Title";
     config.author = "Author";
+    config.sub_text = "1835";
     config.buildVideo = false;
     config.mp4Filename = "../files/out.mp4";
     config.imagesPath = "../files/out-{}.png";
+    config.debug = false;
 
     YAML::Node yaml = YAML::LoadFile(filename);
     if (yaml["colors"]["white_up"]) config.white_up = parseCol(yaml["colors"]["white_up"]);
@@ -54,8 +78,9 @@ void initConf(const std::string &filename) {
     if (yaml["video"]["size"]) config.videoSize = parseSize(yaml["video"]["size"]);
     if (yaml["info"]["title"]) config.title = yaml["info"]["title"].as<std::string>();
     if (yaml["info"]["author"]) config.author = yaml["info"]["author"].as<std::string>();
+    if (yaml["info"]["sub_text"]) config.author = yaml["info"]["sub_text"].as<std::string>();
+    if (yaml["info"]["debug"]) config.debug = yaml["info"]["debug"].as<bool>();
 
-    config.print();
 }
 
 
@@ -95,21 +120,24 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
     std::vector<int> notesDown;
 
 
-    particles->update();
-    auto idx = std::begin(particles->elements);
-    while (idx != std::end(particles->elements)) {
-        // for (const auto& particle: particles->elements) {
-        auto particle = *idx;
-        if (particle.opacity < 0.1) {
-            idx = particles->elements.erase(idx);
-            continue;
-        }
+//    context.draw_image(
+//            imageSmoke.data,
+//            imageSmoke.size.w,
+//            imageSmoke.size.h,
+//            imageSmoke.size.w * imageSmoke.components,
+//            100, 100, 256, 256);
+//    context.draw_image(
+//            imageSmoke.data,
+//            imageSmoke.size.w,
+//            imageSmoke.size.h,
+//            imageSmoke.size.w * imageSmoke.components,
+//            200, 100, 256, 256);
+
+    for (const auto &particle: particles->elements) {
         context.set_shadow_blur(5 - Util::rand());
         context.set_shadow_color(.5, .7, .9, particle.opacity);
         context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, particle.opacity);
         context.fill_rectangle(particle.pos.x - 1, particle.pos.y - 1, 2, 2);
-
-        idx++;
     }
     context.set_shadow_blur(0);
 
@@ -118,7 +146,7 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
 
     context.set_color(canvas_ity::brush_type::stroke_style, .5, .6, .7, 1);
     context.move_to(0, bottomY);
-    context.line_to(width, bottomY);
+    context.line_to((float) width, bottomY);
     context.stroke();
 
     // read part
@@ -132,7 +160,8 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
 
         if (noteBottom < 0) {
             // notes are stored in timestamp order. So, if a note is too far, we can stop to render.
-            break;
+            // TODO: if a note is finished, it's not rendered.
+            // break;
         }
         if (noteTop > bottomY) {
             continue;
@@ -146,27 +175,35 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
         auto notePos = board.getPos(touch.startMessage.note);
 
         // Note block
-        context.set_color(canvas_ity::brush_type::fill_style, .5, .6, .7, (float)touch.startMessage.velocity/255.0f);
-        context.fill_rectangle(notePos - 1, noteTop, board.widthWhite - 2, length);
+        context.set_shadow_color(.5, .6, .7, 1);
+        context.set_shadow_blur(2);
+        context.set_color(canvas_ity::brush_type::fill_style, .5, .6, .7, (float) touch.startMessage.velocity / 127.0f);
+        // context.fill_rectangle(notePos - 1, noteTop, board.widthWhite - 2, length);
+        v::Display::roundRect(context, notePos - 1, noteTop, board.widthWhite - 2, length, 5);
+        context.fill();
+        context.set_shadow_blur(0);
+        context.set_color(canvas_ity::brush_type::stroke_style, .5+.2, .6+.2, .7 + .2, (float) touch.startMessage.velocity / 127.0f);
+        context.stroke();
 
         if (contact) {
-            context.set_shadow_blur(5);
-            context.set_shadow_color(1, 1, 1, 1);
-            context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, .5);
-
-            // context.move_to(notePos - 1, bottomY);
-            // context.line_to(notePos - 1 + board.widthWhite - 2, bottomY);
-            // context.line_to(notePos - 1 + (board.widthWhite - 2) / 2, bottomY - 20);
-            // context.close_path();
-            // context.fill();
-
             float highlight_height = length > 20 ? 20 : length;
             float highlight_top = bottomY - highlight_height;
 
+            context.set_shadow_blur(5);
+            context.set_shadow_color(1, 1, 1, 1);
+            context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, .5);
             context.fill_rectangle(notePos - 1, highlight_top, board.widthWhite - 2, highlight_height);
             context.set_shadow_blur(0);
 
-            for (int i = 0; i < 5; i++) {
+
+            context.set_shadow_blur(20);
+            context.set_shadow_color(1, 1, 1, 1);
+            context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, .5);
+            context.fill_rectangle(notePos - 1, bottomY - 2, board.widthWhite - 2, 2);
+            context.set_shadow_blur(0);
+
+
+            for (int i = 0; i < 10; i++) {
                 particles->emitAt(Vec(notePos - 1 + (board.widthWhite - 2) / 2, bottomY),
                                   Vec(Util::rand() * 4 - 2, -Util::rand() * 10));
             }
@@ -177,10 +214,13 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
 
 void saveImage(canvas_ity::canvas &context, const std::string &name) {
     auto *image = new unsigned char[(int) config.videoSize.w * (int) config.videoSize.h * 4];
-    context.get_image_data(image, (int)config.videoSize.w, (int)config.videoSize.h, (int)config.videoSize.w * 4, 0, 0);
-    stbi_write_png(name.c_str(), (int)config.videoSize.w, (int)config.videoSize.h, 4, image, (int)config.videoSize.w * 4);
+    context.get_image_data(image, (int) config.videoSize.w, (int) config.videoSize.h, (int) config.videoSize.w * 4, 0,
+                           0);
+    stbi_write_png(name.c_str(), (int) config.videoSize.w, (int) config.videoSize.h, 4, image,
+                   (int) config.videoSize.w * 4);
     delete[] image;
 }
+
 
 void saveVideo() {
     auto cmd = fmt::format("ffmpeg -y -framerate {} -i {} -c:v libx264 -pix_fmt yuv420p {}", config.frameRate,
@@ -198,7 +238,9 @@ void process(const std::string &rawFilename) {
 
 
     std::srand(config.seed);
-    canvas_ity::canvas context(config.videoSize.w, config.videoSize.h);
+    canvas_ity::canvas context((int) config.videoSize.w, (int) config.videoSize.h);
+
+    imageSmoke.load("../data/smoke.png");
 
     if (!font.load("../data/font.ttf")) {
         std::cerr << "Cannot load font file\n";
@@ -217,6 +259,7 @@ void process(const std::string &rawFilename) {
     int is = 0;
     for (int i = 0; i < config.numFrames; i++) {
         std::cout << "Rendering frame " << (i + 1) << "/" << config.numFrames << "\r" << std::flush;
+        particles.update();
 
         context.set_color(canvas_ity::brush_type::fill_style, 0, 0, 0, 1);
         context.fill_rectangle(0, 0, config.videoSize.w, config.videoSize.h);
@@ -234,16 +277,19 @@ void process(const std::string &rawFilename) {
         // sub text / license / year ...
         context.set_color(canvas_ity::brush_type::fill_style, .6, .6, .6, 1);
         context.set_font(font.data, (int) font.size, 14);
-        context.fill_text("arrangement John Doe", 30, 40 + 25 + 20);
+        context.fill_text(config.sub_text.c_str(), 30, 40 + 25 + 20);
 
         // debug
-        context.set_color(canvas_ity::brush_type::fill_style, .4, .5, .6, .8);
-        context.set_font(font.data, (int) font.size, 13);
-        context.fill_text(fmt::format("Frame {}, Particles {}", i, particles.elements.size()).c_str(), 30,
-                          300);
+        if (config.debug) {
+            context.set_color(canvas_ity::brush_type::fill_style, 1, 1, 1, 1);
+            context.set_font(font.data, (int) font.size, 12);
+            context.fill_text(fmt::format("F:{}, P:{}", i, particles.elements.size()).c_str(), 20,
+                              config.videoSize.h - 140);
+        }
 
         // render notes and board
-        auto downNotes = render_frame(&particles, &md, board, context, (int) config.videoSize.w, (int) config.videoSize.h, i);
+        auto downNotes = render_frame(&particles, &md, board, context, (int) config.videoSize.w,
+                                      (int) config.videoSize.h, i);
         draw_board(board, context, config.videoSize.h - 110, 100, downNotes);
 
         saveImage(context, fmt::format(fmt::runtime(config.imagesPath), i));
@@ -259,6 +305,7 @@ int main(int argc, char **argv) {
     if (argc > 1) rawFilename = argv[1];
     if (argc > 2) configFilename = argv[2];
     initConf(configFilename);
+    config.print();
     process(rawFilename);
     return 0;
 }

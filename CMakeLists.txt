@@ -21,6 +21,7 @@ set(SOURCES_LIBS
         src/lib/Midic.h
         src/lib/Util.h
         src/lib/Effects.h
+        src/lib/Display.h
 )
 
 add_executable(midic src/main.cpp ${SOURCES_LIBS})
@@ -29,4 +30,3 @@ target_link_libraries(midic libremidi)
 add_executable(midic_raster src/main_raster.cpp ${SOURCES_LIBS})
 target_link_libraries(midic_raster PUBLIC libremidi fmt yaml-cpp::yaml-cpp)
 
-# 
