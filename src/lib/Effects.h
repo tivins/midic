@@ -32,9 +32,9 @@ namespace v {
             auto idx = std::begin(elements);
             while (idx != std::end(elements)) {
                 auto &particle = *idx;
-                const float random_value_f = Util::rand() * 1 - .5f;
-                particle.opacity -= Util::rand() * .06f;
-                particle.dir.y -= Util::rand() * .07f;
+                const float random_value_f = Util::pseudoRandom() * 1 - .5f;
+                particle.opacity -= Util::pseudoRandom() * .06f;
+                particle.dir.y -= Util::pseudoRandom() * .07f;
                 particle.dir.x += random_value_f;
                 particle.pos.x += particle.dir.x;
                 particle.pos.y += particle.dir.y;

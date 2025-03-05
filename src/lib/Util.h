@@ -9,6 +9,14 @@
 #include <memory>
 #include <array>
 
+#ifdef _WIN32
+#include <cstdio>
+#define popen _popen
+#define pclose _pclose
+#else
+#include <unistd.h>
+#endif
+
 namespace v {
     class Col {
     public:
@@ -59,7 +67,10 @@ namespace v {
             return result;
         }
 
-        static float rand() {
+        /**
+         * Predictable random value
+         */
+        static float pseudoRandom() {
             return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
         }
     };

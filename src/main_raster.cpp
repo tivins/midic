@@ -138,7 +138,7 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
     //            200, 100, 256, 256);
 
     for (const auto &particle: particles->elements) {
-        context.set_shadow_blur(5 - Util::rand());
+        context.set_shadow_blur(5 - Util::pseudoRandom());
         context.set_shadow_color(.5, .7, .9, particle.opacity);
         context.set_color(canvas_ity::brush_type::fill_style, .9, .9, .9, particle.opacity);
         context.fill_rectangle(particle.pos.x - 1, particle.pos.y - 1, 2, 2);
@@ -210,7 +210,7 @@ render_frame(Particles *particles, MidiData *md, Board &board, canvas_ity::canva
 
             for (int i = 0; i < 10; i++) {
                 particles->emitAt(Vec(notePos - 1 + (board.widthWhite - 2) / 2, bottomY),
-                                  Vec(Util::rand() * 4 - 2, -Util::rand() * 10));
+                                  Vec(Util::pseudoRandom() * 4 - 2, -Util::pseudoRandom() * 10));
             }
         }
     }
